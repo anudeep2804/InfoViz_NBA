@@ -15,9 +15,16 @@
 
 ![Image of NBA players](goat_debate.png)
 
+
+
 <br>
 
 >Basic statistics to be analyzed include *points per game*, *total rebounds per game*, and *assists per game*. Advanced statistics will be carefully selected to provide a more comprehensive understanding of each player's impact on the game. Potential advanced metrics to consider may include *Player Efficiency Rating (PER)*, *Win Shares (WS)*, *Box Plus/Minus (BPM)*, and *Value Over Replacement Player (VORP)*. By visualizing this data, we aim to facilitate an informed evaluation of the GOAT debate, potentially identifying a clear winner based on statistical evidence.
+
+<br>
+
+> dataset link - [Kaggle](https://www.kaggle.com/datasets/justinas/nba-players-data)
+> Dataset Information - The data set contains over two decades of data on each player who has been part of an NBA teams' roster. It captures demographic variables such as age, height, weight and place of birth, biographical details like the team played for, draft year and round. In addition, it has basic box score statistics such as games played, average number of points, rebounds, assists, etc.
 
 <br>
 
