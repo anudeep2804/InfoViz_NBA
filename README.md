@@ -24,10 +24,11 @@
 <br>
 
 > dataset link - [Kaggle](https://www.kaggle.com/datasets/justinas/nba-players-data)
+> dataset link - [kaggle](https://www.kaggle.com/datasets/drgilermo/nba-players-stats)
 
 <br>
 
-> Dataset Information - The data set contains over two decades of data on each player who has been part of an NBA teams' roster. It captures demographic variables such as age, height, weight and place of birth, biographical details like the team played for, draft year and round. In addition, it has basic box score statistics such as games played, average number of points, rebounds, assists, etc.
+> Dataset Information - The datasets contains over two decades of data on each player who has been part of an NBA teams' roster. It captures demographic variables such as age, height, weight and place of birth, biographical details like the team played for, draft year and round. In addition, it has basic box score statistics such as games played, average number of points, rebounds, assists, etc.
 
 <br>
 
