@@ -24,6 +24,8 @@
 <br>
 
 > dataset link - [Kaggle](https://www.kaggle.com/datasets/justinas/nba-players-data)
+<br>
+
 > dataset link - [kaggle](https://www.kaggle.com/datasets/drgilermo/nba-players-stats)
 
 <br>
