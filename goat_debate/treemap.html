@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GOAT Debate</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+
+<body>
+    <script>
+        d3.csv("datasets/Seasons_Stats.csv").then(data => {
+            // Preprocessing: removing unnecessary columns
+            data.forEach(d => {
+                delete d.Pos;
+                delete d.Age;
+                delete d.Tm;
+                delete d.GS;
+                delete d.MP;
+                delete d.blanl;
+                delete d.blank2;
+            });
+
+            // Group the players
+            const groupedPlayers = new Map();
+            data.forEach(d => {
+                const playerName = d.Player;
+                if (groupedPlayers.has(playerName)) {
+                    groupedPlayers.get(playerName).push(d);
+                } else {
+                    groupedPlayers.set(playerName, [d]);
+                }
+            });
+
+            // Remove players with fewer than 10 seasons
+            groupedPlayers.forEach((value, key) => {
+                if (value.length < 10) {
+                    groupedPlayers.delete(key);
+                }
+            });
+
+            // Remove players with any null attribute values
+            groupedPlayers.forEach((seasons, playerName) => {
+                for (const season of seasons) {
+                    let hasNullValue = false;
+                    for (const attribute in season) {
+                        if (season[attribute] === null || season[attribute] === "") {
+                            hasNullValue = true;
+                            break;
+                        }
+                    }
+                    if (hasNullValue) {
+                        groupedPlayers.delete(playerName);
+                        break;
+                    }
+                }
+            });
+
+
+            // Create a new map to store the calculated attribute sums
+            const playerAttributeSums = new Map();
+
+            groupedPlayers.forEach((seasons, playerName) => {
+                let attributeSums = {
+                    PTS: 0,
+                    TRB: 0,
+                    AST: 0,
+                    STL: 0,
+                    BLK: 0,
+                    TOV: 0
+                };
+
+                seasons.forEach(season => {
+                    const gamesPlayed = parseFloat(season.G);
+                    attributeSums.TRB += parseFloat(season.TRB) / gamesPlayed;
+                    attributeSums.AST += parseFloat(season.AST) / gamesPlayed;
+                    attributeSums.STL += parseFloat(season.STL) / gamesPlayed;
+                    attributeSums.BLK += parseFloat(season.BLK) / gamesPlayed;
+                    attributeSums.TOV += parseFloat(season.TOV) / gamesPlayed;
+                    attributeSums.PTS += parseFloat(season.PTS) / gamesPlayed;
+                });
+
+                // Divide the attribute sums by the number of seasons
+                const numSeasons = seasons.length;
+                attributeSums.TRB /= numSeasons;
+                attributeSums.AST /= numSeasons;
+                attributeSums.STL /= numSeasons;
+                attributeSums.BLK /= numSeasons;
+                attributeSums.TOV /= numSeasons;
+                attributeSums.PTS /= numSeasons;
+
+                // Add the calculated sums to the new map
+                playerAttributeSums.set(playerName, attributeSums);
+            });
+
+
+            // Helper function to get the top N players for each attribute
+            function getTopNPlayers(players, attribute, n) {
+                return [...players.entries()]
+                    .sort((a, b) => b[1][attribute] - a[1][attribute])
+                    .slice(0, n)
+                    .map(([playerName, attributes]) => ({ name: playerName, value: attributes[attribute] }));
+            }
+
+
+            // Convert the playerAttributeSums map into a hierarchical JSON object
+            // Convert the playerAttributeSums map into a hierarchical JSON object with top 40 players for each attribute
+            const hierarchyData = {
+                name: "attributes",
+                children: [
+                    { name: "PTS", children: getTopNPlayers(playerAttributeSums, "PTS", 40) },
+                    { name: "TRB", children: getTopNPlayers(playerAttributeSums, "TRB", 40) },
+                    { name: "AST", children: getTopNPlayers(playerAttributeSums, "AST", 40) },
+                    { name: "STL", children: getTopNPlayers(playerAttributeSums, "STL", 40) },
+                    { name: "BLK", children: getTopNPlayers(playerAttributeSums, "BLK", 40) },
+                    { name: "TOV", children: getTopNPlayers(playerAttributeSums, "TOV", 40) }
+                ],
+            };
+
+            // console.log(hierarchyData);
+
+            // Set the dimensions and margins of the treemap
+            const width = 1000;
+            const height = 600;
+            const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+
+            // Define a color scale for the attributes
+            const colorScale = d3.scaleOrdinal()
+                .domain(["TRB", "AST", "STL", "BLK", "TOV", "PTS"])
+                .range(d3.schemeSet2);
+
+            // Categories for the legend
+            const categories = [
+                { name: "TRB", color: d3.schemeSet2[0] },
+                { name: "AST", color: d3.schemeSet2[1] },
+                { name: "STL", color: d3.schemeSet2[2] },
+                { name: "BLK", color: d3.schemeSet2[3] },
+                { name: "TOV", color: d3.schemeSet2[4] },
+                { name: "PTS", color: d3.schemeSet2[5] },
+            ];
+
+
+            // Function to create the legend
+            function createLegend(svg, categories) {
+                const legend = svg.append("g")
+                    .attr("class", "legend")
+                    .attr("transform", `translate(${margin.left},${margin.top + 30})`);
+
+                const legendItems = legend.selectAll("g")
+                    .data(categories)
+                    .enter()
+                    .append("g")
+                    .attr("transform", (d, i) => `translate(${i * 120}, 0)`);
+
+                legendItems.append("rect")
+                    .attr("width", 10)
+                    .attr("height", 10)
+                    .attr("fill", d => d.color);
+
+                legendItems.append("text")
+                    .attr("x", 15)
+                    .attr("y", 10)
+                    .text(d => d.name)
+                    .attr("font-size", "12px");
+            }
+
+            // Create the treemap layout
+            const treemapLayout = d3.treemap()
+                .size([width, height])
+                .padding(2);
+
+            function normalizeAndApplyPowerTransformation(data, exponent) {
+                data.children.forEach(attribute => {
+                    // Calculate the sum of player values for the current attribute
+                    let sum = 0;
+                    attribute.children.forEach(player => {
+                        sum += player.value;
+                    });
+
+                    // Normalize and apply power transformation to the player values within the current attribute group
+                    attribute.children.forEach(player => {
+                        const normalizedValue = player.value / sum;
+                        player.value = Math.pow(normalizedValue, exponent);
+                    });
+                });
+
+                return data;
+            }
+
+            const transformedHierarchyData = normalizeAndApplyPowerTransformation(hierarchyData, 2);
+
+            const root = d3.hierarchy(transformedHierarchyData)
+                .sum(d => d.value)
+                .sort(() => Math.random() - 0.5);
+
+
+            // Tree map definition
+            treemapLayout(root);
+
+            // svg element for each player and attribute
+            const svg = d3.select("body")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom + 30);
+
+            const legendGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const treemapGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top + 60})`);
+
+            createLegend(legendGroup, categories);
+
+
+            // Draw the rectangles for each player and attribute
+            const leaf = treemapGroup.selectAll("g")
+                .data(root.leaves())
+                .enter()
+                .append("g")
+                .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+
+            leaf.append("rect")
+                .attr("width", d => d.x1 - d.x0)
+                .attr("height", d => d.y1 - d.y0)
+                .attr("fill", d => colorScale(d.parent.data.name));
+
+
+            function getFontSize(width, height) {
+                const minDimension = Math.min(width, height);
+                return Math.max(8, minDimension / 4);
+            }
+
+            function wrapText(text, width, fontSize) {
+                const words = text.split(" ");
+                const lines = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const word = words[i];
+                    const newLine = currentLine + " " + word;
+
+                    if (newLine.length * fontSize * 0.6 > width) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = newLine;
+                    }
+                }
+
+                lines.push(currentLine);
+                return lines;
+            }
+
+
+            leaf.each(function (d) {
+                const tileWidth = d.x1 - d.x0;
+                const tileHeight = d.y1 - d.y0;
+                const fontSize = getFontSize(tileWidth, tileHeight);
+                const textLines = wrapText(d.data.name, tileWidth, fontSize);
+
+                const text = d3.select(this).append("text")
+                    .attr("x", 3)
+                    .attr("font-size", fontSize + "px")
+                    .attr("fill", "black");
+
+                text.selectAll("tspan")
+                    .data(textLines)
+                    .enter()
+                    .append("tspan")
+                    .attr("x", 3)
+                    .attr("dy", (d, i) => (i === 0 ? fontSize : fontSize * 1.2) + "px")
+                    .text(d => d);
+            });
+
+
+
+        });
+    </script>
+</body>
+
+</html>
