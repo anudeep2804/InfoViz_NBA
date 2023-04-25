@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GOAT Debate</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+
+<body>
+    <script type="module">
+        import { preprocessData } from './dataset_preprocessing.js';
+
+        function histogram(groups) {
+            // Create a new map to store the calculated attribute sums
+            const playerAttributeSums = new Map();
+            groups.forEach((seasons, playerName) => {
+                let attributeSums = {
+                    PTS: 0,
+                    TRB: 0,
+                    AST: 0,
+                    STL: 0,
+                    BLK: 0,
+                    TOV: 0
+                };
+
+                seasons.forEach(season => {
+                    const gamesPlayed = parseFloat(season.G);
+                    attributeSums.TRB += parseFloat(season.TRB) / gamesPlayed;
+                    attributeSums.AST += parseFloat(season.AST) / gamesPlayed;
+                    attributeSums.STL += parseFloat(season.STL) / gamesPlayed;
+                    attributeSums.BLK += parseFloat(season.BLK) / gamesPlayed;
+                    attributeSums.TOV += parseFloat(season.TOV) / gamesPlayed;
+                    attributeSums.PTS += parseFloat(season.PTS) / gamesPlayed;
+                });
+
+                // Divide the attribute sums by the number of seasons
+                const numSeasons = seasons.length;
+                attributeSums.TRB /= numSeasons;
+                attributeSums.AST /= numSeasons;
+                attributeSums.STL /= numSeasons;
+                attributeSums.BLK /= numSeasons;
+                attributeSums.TOV /= numSeasons;
+                attributeSums.PTS /= numSeasons;
+
+                // Add the calculated sums to the new map
+                playerAttributeSums.set(playerName, attributeSums);
+            });
+
+            console.log(playerAttributeSums);
+            var playerAttributeArray = Array.from(playerAttributeSums.values());
+
+
+            // Create an array of player names from the playerAttributes object
+            var playerNames = Array.from(playerAttributeSums.keys());
+            // Create an array of data for each attribute
+            var astData = playerAttributeArray.map(function (player) { return player.AST; });
+            var blkData = playerAttributeArray.map(function (player) { return player.BLK; });
+            var ptsData = playerAttributeArray.map(function (player) { return player.PTS; });
+            var stlData = playerAttributeArray.map(function (player) { return player.STL; });
+            var tovData = playerAttributeArray.map(function (player) { return player.TOV; });
+            var trbData = playerAttributeArray.map(function (player) { return player.TRB; });
+
+            console.log(astData);
+            // Create an array of attribute names
+            var attributes = ["AST", "BLK", "PTS", "STL", "TOV", "TRB"];
+
+            // Create a function to create a histogram for a given attribute
+            function createHistogram(attribute, data) {
+                var margin = { top: 30, right: 30, bottom: 30, left: 30 },
+                    width = 460 - margin.left - margin.right,
+                    height = 400 - margin.top - margin.bottom;
+
+                var svg = d3.select("body")
+                    .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform",
+                        "translate(" + margin.left + "," + margin.top + ")");
+
+                // X axis: scale and draw
+                var x = d3.scaleBand()
+                    .domain(playerNames)
+                    .range([0, width])
+                    .padding(0.1);
+                svg.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x).tickValues([]));
+
+                var y = d3.scaleLinear()
+                    .range([height, 0]);
+
+                // Build and Show the Y scale
+                y.domain([0, d3.max(data)])
+                svg.append("g")
+                    .call(d3.axisLeft(y));
+
+                // Create a bin for each player
+                var bins = playerNames.map((name, i) => {
+                    return { name: name, value: data[i] };
+                });
+
+                // Create the bars for the histogram
+                svg.selectAll("rect")
+                    .data(bins)
+                    .enter()
+                    .append("rect")
+                    .attr("x", d => x(d.name))
+                    .attr("y", d => y(d.value))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => height - y(d.value))
+                    .style("fill", "steelblue");
+
+                // Add a title for the histogram
+                svg.append("text")
+                    .attr("x", (width / 2))
+                    .attr("y", 0 - (margin.top / 2))
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "18px")
+                    .style("text-decoration", "underline")
+                    .text(attribute);
+            }
+
+            // calling the function to create histograms for each attribute.
+            attributes.forEach(function (attribute) {
+                createHistogram(attribute, playerAttributeArray.map(function (player) { return player[attribute]; }));
+            });
+
+
+
+        }
+        preprocessData(histogram);
+
+
+
+
+    </script>
+</body>
+
+</html>
