@@ -54,10 +54,9 @@
       }
     };
 
-    d3.csv("/datasets/Seasons_Stats.csv").then(data => {
+    d3.csv("datasets/Seasons_Stats.csv").then(data => {
       // Preprocessing: removing unnecessary columns
       data.forEach(d => {
-          delete d[""];
           delete d.Pos;
           delete d.Age;
           delete d.Tm;

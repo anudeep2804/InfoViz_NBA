@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Top 25</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+
+<body>
+    <script>
+        d3.csv("datasets/main.csv").then(data => {
+            // Preprocessing: removing unnecessary columns
+            data.forEach(d => {
+                delete d[""];
+                delete d.Pos;
+                delete d.Age;
+                delete d.Tm;
+                delete d.GS;
+                delete d.MP;
+            });
+
+            // Group the players
+            const groupedPlayers = new Map();
+            data.forEach(d => {
+                const playerName = d.Player;
+                if (groupedPlayers.has(playerName)) {
+                    groupedPlayers.get(playerName).push(d);
+                } else {
+                    groupedPlayers.set(playerName, [d]);
+                }
+            });
+
+            // Remove players with fewer than 10 seasons
+            groupedPlayers.forEach((value, key) => {
+                if (value.length < 10) {
+                    groupedPlayers.delete(key);
+                }
+            });
+
+            // Remove players with any null attribute values
+            groupedPlayers.forEach((seasons, playerName) => {
+                for (const season of seasons) {
+                    let hasNullValue = false;
+                    for (const attribute in season) {
+                        if (season[attribute] === null || season[attribute] === "") {
+                            hasNullValue = true;
+                            break;
+                        }
+                    }
+                    if (hasNullValue) {
+                        groupedPlayers.delete(playerName);
+                        break;
+                    }
+                }
+            });
+
+
+            // Create a new map to store the calculated attribute sums
+            const playerAttributeSums = new Map();
+
+            groupedPlayers.forEach((seasons, playerName) => {
+                let attributeSums = {
+                    PTS: 0,
+                    TRB: 0,
+                    AST: 0,
+                    STL: 0,
+                    BLK: 0,
+                    TOV: 0,
+                    FGA: 0,
+                    FG: 0,
+                    FTA: 0,
+                    FT: 0
+                };
+
+                seasons.forEach(season => {
+                    const gamesPlayed = parseFloat(season.G);
+                    attributeSums.TRB += parseFloat(season.TRB) / gamesPlayed;
+                    attributeSums.AST += parseFloat(season.AST) / gamesPlayed;
+                    attributeSums.STL += parseFloat(season.STL) / gamesPlayed;
+                    attributeSums.BLK += parseFloat(season.BLK) / gamesPlayed;
+                    attributeSums.TOV += parseFloat(season.TOV) / gamesPlayed;
+                    attributeSums.PTS += parseFloat(season.PTS) / gamesPlayed;
+                    attributeSums.FGA += parseFloat(season.FGA) / gamesPlayed;
+                    attributeSums.FG += parseFloat(season.FG) / gamesPlayed;
+                    attributeSums.FTA += parseFloat(season.FTA) / gamesPlayed;
+                    attributeSums.FT += parseFloat(season.FT) / gamesPlayed;
+
+                });
+
+                // Divide the attribute sums by the number of seasons
+                const numSeasons = seasons.length;
+                attributeSums.TRB /= numSeasons;
+                attributeSums.AST /= numSeasons;
+                attributeSums.STL /= numSeasons;
+                attributeSums.BLK /= numSeasons;
+                attributeSums.TOV /= numSeasons;
+                attributeSums.PTS /= numSeasons;
+                attributeSums.FGA /= numSeasons;
+                attributeSums.FG /= numSeasons;
+                attributeSums.FTA /= numSeasons;
+                attributeSums.FT /= numSeasons;
+
+                // Add the calculated sums to the new map
+                playerAttributeSums.set(playerName, attributeSums);
+
+
+            });
+
+            playerAttributeSums.forEach((attributeSums, playerName) => {
+                const basicPlayerScore = (attributeSums.PTS + attributeSums.TRB + attributeSums.AST + attributeSums.STL + attributeSums.BLK) - (attributeSums.FGA - attributeSums.FG + attributeSums.FTA - attributeSums.FT + attributeSums.TOV);
+                attributeSums.basicPlayerScore = basicPlayerScore;
+            });
+            // console.log(playerAttributeSums);
+
+
+
+            // Helper function to get the top N players for each attribute
+            function getTopNPlayers(players, attribute, n) {
+                return [...players.entries()]
+                    .sort((a, b) => b[1][attribute] - a[1][attribute])
+                    .slice(0, n)
+                    .map(([playerName, attributes]) => ({ name: playerName, value: attributes[attribute] }));
+            }
+
+
+            const top20PlayersByBasicPlayerScore = getTopNPlayers(playerAttributeSums, "basicPlayerScore", 20);
+
+            // Convert the top 40 players list into a hierarchical JSON object
+            const hierarchyData = {
+                name: "Top 20 Players",
+                children: top20PlayersByBasicPlayerScore.map(({ name, value }) => ({ name, value }))
+            };
+
+            console.log(hierarchyData);
+
+             // Create an unordered list element and append it to the body
+             const ul = document.createElement('ul');
+            document.body.appendChild(ul);
+
+            // Iterate through the top 20 players and append them as list items
+            top20PlayersByBasicPlayerScore.forEach(player => {
+                const li = document.createElement('li');
+                li.textContent = `${player.name}: ${player.value.toFixed(2)}`;
+                ul.appendChild(li);
+            });
+
+        });
+    </script>
+</body>
+
+</html>
