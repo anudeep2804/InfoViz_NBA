@@ -55,7 +55,7 @@ const svg = d3.select("body")
     }
 };
 
-        d3.csv("Seasons_Stats.csv").then(data => {
+        d3.csv("/datasets/Seasons_Stats.csv").then(data => {
           // Preprocessing: removing unnecessary columns
           data.forEach(d => {
               delete d.Pos;
