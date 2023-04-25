@@ -92,7 +92,7 @@
                 playerAttributeSums.set(playerName, attributeSums);
             });
 
-            
+
             // Helper function to get the top N players for each attribute
             function getTopNPlayers(players, attribute, n) {
                 return [...players.entries()]
@@ -116,29 +116,81 @@
                 ],
             };
 
-
-
-
-            // Log the hierarchical JSON object
-            console.log(hierarchyData);
-
+            // console.log(hierarchyData);
 
             // Set the dimensions and margins of the treemap
             const width = 1000;
             const height = 600;
             const margin = { top: 10, right: 10, bottom: 10, left: 10 };
 
-            
+            // Define a color scale for the attributes
+            const colorScale = d3.scaleOrdinal()
+                .domain(["TRB", "AST", "STL", "BLK", "TOV", "PTS"])
+                .range(d3.schemeSet2);
+
+            // Categories for the legend
+            const categories = [
+                { name: "TRB", color: d3.schemeSet2[0] },
+                { name: "AST", color: d3.schemeSet2[1] },
+                { name: "STL", color: d3.schemeSet2[2] },
+                { name: "BLK", color: d3.schemeSet2[3] },
+                { name: "TOV", color: d3.schemeSet2[4] },
+                { name: "PTS", color: d3.schemeSet2[5] },
+            ];
+
+
+            // Function to create the legend
+            function createLegend(svg, categories) {
+                const legend = svg.append("g")
+                    .attr("class", "legend")
+                    .attr("transform", `translate(${margin.left},${margin.top + 30})`);
+
+                const legendItems = legend.selectAll("g")
+                    .data(categories)
+                    .enter()
+                    .append("g")
+                    .attr("transform", (d, i) => `translate(${i * 120}, 0)`);
+
+                legendItems.append("rect")
+                    .attr("width", 10)
+                    .attr("height", 10)
+                    .attr("fill", d => d.color);
+
+                legendItems.append("text")
+                    .attr("x", 15)
+                    .attr("y", 10)
+                    .text(d => d.name)
+                    .attr("font-size", "12px");
+            }
 
             // Create the treemap layout
             const treemapLayout = d3.treemap()
                 .size([width, height])
                 .padding(2);
 
-            // Create the root of the treemap
-            const root = d3.hierarchy(hierarchyData)
+            function normalizeAndApplyPowerTransformation(data, exponent) {
+                data.children.forEach(attribute => {
+                    // Calculate the sum of player values for the current attribute
+                    let sum = 0;
+                    attribute.children.forEach(player => {
+                        sum += player.value;
+                    });
+
+                    // Normalize and apply power transformation to the player values within the current attribute group
+                    attribute.children.forEach(player => {
+                        const normalizedValue = player.value / sum;
+                        player.value = Math.pow(normalizedValue, exponent);
+                    });
+                });
+
+                return data;
+            }
+
+            const transformedHierarchyData = normalizeAndApplyPowerTransformation(hierarchyData, 2);
+
+            const root = d3.hierarchy(transformedHierarchyData)
                 .sum(d => d.value)
-                .sort((a, b) => b.value - a.value)
+                .sort(() => Math.random() - 0.5);
 
 
             // Tree map definition
@@ -148,30 +200,36 @@
             const svg = d3.select("body")
                 .append("svg")
                 .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
+                .attr("height", height + margin.top + margin.bottom + 30);
+
+            const legendGroup = svg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
+            const treemapGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top + 60})`);
+
+            createLegend(legendGroup, categories);
+
+
             // Draw the rectangles for each player and attribute
-            const leaf = svg.selectAll("g")
+            const leaf = treemapGroup.selectAll("g")
                 .data(root.leaves())
                 .enter()
                 .append("g")
                 .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
+
             leaf.append("rect")
                 .attr("width", d => d.x1 - d.x0)
                 .attr("height", d => d.y1 - d.y0)
-                .attr("fill", d => d3.schemeSet2[d.depth - 1]);
+                .attr("fill", d => colorScale(d.parent.data.name));
 
-            // Add player names to the tiles
             leaf.append("text")
                 .attr("x", 3)
                 .attr("y", 12)
                 .text(d => d.data.name)
                 .attr("font-size", "10px")
                 .attr("fill", "white");
-
 
         });
     </script>
