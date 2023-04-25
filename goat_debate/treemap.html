@@ -8,7 +8,7 @@
 
 <body>
     <script>
-        d3.csv("archive-4/Seasons_Stats.csv").then(data => {
+        d3.csv("datasets/Seasons_Stats.csv").then(data => {
             // Preprocessing: removing unnecessary columns
             data.forEach(d => {
                 delete d.Pos;
@@ -224,12 +224,55 @@
                 .attr("height", d => d.y1 - d.y0)
                 .attr("fill", d => colorScale(d.parent.data.name));
 
-            leaf.append("text")
-                .attr("x", 3)
-                .attr("y", 12)
-                .text(d => d.data.name)
-                .attr("font-size", "10px")
-                .attr("fill", "white");
+
+            function getFontSize(width, height) {
+                const minDimension = Math.min(width, height);
+                return Math.max(8, minDimension / 4);
+            }
+
+            function wrapText(text, width, fontSize) {
+                const words = text.split(" ");
+                const lines = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const word = words[i];
+                    const newLine = currentLine + " " + word;
+
+                    if (newLine.length * fontSize * 0.6 > width) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = newLine;
+                    }
+                }
+
+                lines.push(currentLine);
+                return lines;
+            }
+
+
+            leaf.each(function (d) {
+                const tileWidth = d.x1 - d.x0;
+                const tileHeight = d.y1 - d.y0;
+                const fontSize = getFontSize(tileWidth, tileHeight);
+                const textLines = wrapText(d.data.name, tileWidth, fontSize);
+
+                const text = d3.select(this).append("text")
+                    .attr("x", 3)
+                    .attr("font-size", fontSize + "px")
+                    .attr("fill", "black");
+
+                text.selectAll("tspan")
+                    .data(textLines)
+                    .enter()
+                    .append("tspan")
+                    .attr("x", 3)
+                    .attr("dy", (d, i) => (i === 0 ? fontSize : fontSize * 1.2) + "px")
+                    .text(d => d);
+            });
+
+
 
         });
     </script>
