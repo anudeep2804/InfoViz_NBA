@@ -141,25 +141,27 @@ const svg = d3.select("body")
           const top10Players = processPlayers(groupedPlayers);
           console.log(top10Players);
 
-          /////////////////////////////////////////////
-          // const xScale = d3.scaleTime().rangeRound([0, width]);
-          const xScale = d3.scalePoint().range([0, width]);
+          const xScale = d3.scalePoint()
+  .range([0, width])
+  .padding(0.1); // Adjust the padding value between 0 and 1 to control the spacing between the points on the x-axis
 
-          const yScale = d3.scaleLinear().rangeRound([height, 0]);
+const yScale = d3.scaleLinear().rangeRound([height, 0]);
 
-          // Line generator
-          const line = d3.line()
-            .x((d, i) => xScale(i+1))
-            .y(d => d ? yScale(d.sum) : null);
+// Line generator
+const line = d3.line()
+  .x((d, i) => xScale(i + 1))
+  .y(d => d ? yScale(d.sum) : null);
 
-          // console.log(">>>>>>LINE>>>>>>>>",xScale)
+// Set domain for scales
+const allSumStats = top10Players.flatMap(player => player.sumStats);
+const maxSeasons = Math.max(...top10Players.map(player => player.sumStats.length));
 
-          // Set domain for scales
-          const allSumStats = top10Players.flatMap(player => player.sumStats);
-          // xScale.domain(d3.extent(allSumStats, d => new Date(+d.year, 0, 1)));
-          xScale.domain(top10Players[0].sumStats.map((d,i) => `${i+1}`));
+// Create an array with numbers from 1 to maxSeasons, and convert them to strings
+const seasonsArray = Array.from({ length: maxSeasons }, (_, i) => `${i + 1}`);
+xScale.domain(seasonsArray);
 
-          yScale.domain([0, d3.max(allSumStats, d => d.sum)]);
+yScale.domain([0, d3.max(allSumStats, d => d.sum)]);
+
 
           // Add X-axis
           svg.append("g")
@@ -172,16 +174,18 @@ const svg = d3.select("body")
             .attr("text-anchor", "end")
             .text("Year");
 
-          // Add Y-axis
-          svg.append("g")
-            .call(d3.axisLeft(yScale))
-            .append("text")
-            .attr("fill", "#000")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 6)
-            .attr("dy", "0.71em")
-            .attr("text-anchor", "end")
-            .text("Sum");
+         // Add Y-axis
+svg.append("g")
+  .call(d3.axisLeft(yScale)
+    .tickFormat(d3.format("d")) // Add this line to format the y-axis ticks as integers
+  )
+  .append("text")
+  .attr("fill", "#000")
+  .attr("transform", "rotate(-90)")
+  .attr("y", 10)
+  .attr("dy", "0.71em")
+  .attr("text-anchor", "end")
+  .text("Sum");
 
           // Function to get color for each player
           const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
