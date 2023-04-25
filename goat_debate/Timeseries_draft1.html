@@ -18,7 +18,7 @@
 <body>
     <script>
         const margin = { top: 20, right: 20, bottom: 40, left: 20 };
-const width = 900 - margin.left - margin.right;
+const width = 1300 - margin.left - margin.right;
 const height = 500 - margin.top - margin.bottom;
 
 const svg = d3.select("body")
@@ -140,28 +140,32 @@ const svg = d3.select("body")
           // Use your actual groupedPlayers map instead of the hardcoded example
           const top10Players = processPlayers(groupedPlayers);
           console.log(top10Players);
+          let maxSumStatsIndex = 0;
+          for (let i = 1; i < top10Players.length; i++) {
+            if (top10Players[i].sumStats.length > top10Players[maxSumStatsIndex].sumStats.length) {
+              maxSumStatsIndex = i;
+            }
+          }
 
-          const xScale = d3.scalePoint()
-  .range([0, width])
-  .padding(0.1); // Adjust the padding value between 0 and 1 to control the spacing between the points on the x-axis
+          /////////////////////////////////////////////
+          // const xScale = d3.scaleTime().rangeRound([0, width]);
+          const xScale = d3.scalePoint().range([0, width]);
 
-const yScale = d3.scaleLinear().rangeRound([height, 0]);
+          const yScale = d3.scaleLinear().rangeRound([height, 0]);
 
-// Line generator
-const line = d3.line()
-  .x((d, i) => xScale(i + 1))
-  .y(d => d ? yScale(d.sum) : null);
+          // Line generator
+          const line = d3.line()
+            .x((d, i) => xScale(i+1))
+            .y(d => d ? yScale(d.sum) : null);
 
-// Set domain for scales
-const allSumStats = top10Players.flatMap(player => player.sumStats);
-const maxSeasons = Math.max(...top10Players.map(player => player.sumStats.length));
+          // console.log(">>>>>>LINE>>>>>>>>",xScale)
 
-// Create an array with numbers from 1 to maxSeasons, and convert them to strings
-const seasonsArray = Array.from({ length: maxSeasons }, (_, i) => `${i + 1}`);
-xScale.domain(seasonsArray);
+          // Set domain for scales
+          const allSumStats = top10Players.flatMap(player => player.sumStats);
+          // xScale.domain(d3.extent(allSumStats, d => new Date(+d.year, 0, 1)));
+          xScale.domain(top10Players[maxSumStatsIndex].sumStats.map((d,i) => `${i+1}`));
 
-yScale.domain([0, d3.max(allSumStats, d => d.sum)]);
-
+          yScale.domain([0, d3.max(allSumStats, d => d.sum)]);
 
           // Add X-axis
           svg.append("g")
@@ -174,25 +178,23 @@ yScale.domain([0, d3.max(allSumStats, d => d.sum)]);
             .attr("text-anchor", "end")
             .text("Year");
 
-         // Add Y-axis
-svg.append("g")
-  .call(d3.axisLeft(yScale)
-    .tickFormat(d3.format("d")) // Add this line to format the y-axis ticks as integers
-  )
-  .append("text")
-  .attr("fill", "#000")
-  .attr("transform", "rotate(-90)")
-  .attr("y", 10)
-  .attr("dy", "0.71em")
-  .attr("text-anchor", "end")
-  .text("Sum");
+          // Add Y-axis
+          svg.append("g")
+            .call(d3.axisLeft(yScale))
+            .append("text")
+            .attr("fill", "#000")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", "0.71em")
+            .attr("text-anchor", "end")
+            .text("Sum");
 
           // Function to get color for each player
           const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
           top10Players.forEach((player, index) => {
             const playerData = player.sumStats.map(stats => ({ year: stats.year, sum: stats.sum }));
-            // console.log(playerData);
+            // console.log(player.playerName, playerData);
 
             // Add the line
             const linePath = svg.append("path")
@@ -235,6 +237,28 @@ svg.append("g")
                 // .transition()
                 // .duration(200)
                 .style("opacity", 0);
+              });
+
+              const lineCircles = svg.selectAll(".circle")
+              .data(d => playerData)
+              .enter()
+              .append("circle")
+              .attr("cx", (d,i) => xScale(i+1))
+              .attr("cy", d => yScale(d.sum))
+              .attr("r", 3)
+              .attr("fill", colorScale(index))
+              .on("mouseover", function (event, data, index) {
+                d3.select(this).attr("fill", "red");
+                tooltip.style("opacity", 0.9);
+                const { clientX, clientY } = event;
+                // console.log(">>>> IN MOUSEOVER >>>>> SETTING TOOLTIP >>>>> POINT",player,data,index)
+                tooltip.html(tooltipText(player, data, index))
+                  .style("left", (clientX + 10) + "px")
+                  .style("top", (clientY - 28) + "px");
+              })
+              .on("mouseout", function () {
+                d3.select(this).attr("fill", "steelblue");
+                tooltip.style("opacity", 0);
               });
           });
         });
